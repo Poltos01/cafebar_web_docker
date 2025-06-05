@@ -1,0 +1,32 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cafebar-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - .:/var/www
+    ports:
+      - "9000:9000"  # Порт для PHP-FPM
+    networks:
+      - laravel
+
+  nginx:
+    image: nginx:alpine
+    container_name: cafebar-nginx
+    restart: unless-stopped
+    ports:
+      - "8000:80"    # Основной порт для доступа к сайту
+    volumes:
+      - .:/var/www
+      - ./nginx:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - laravel
+
+networks:
+  laravel:
+    driver: bridge
