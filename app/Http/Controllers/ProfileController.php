@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
@@ -51,6 +52,9 @@ class ProfileController extends Controller
             }
         }
 
+        // Получение смен пользователя
+        $shifts = $this->fetchUserShifts($user['user_id']);
+        
         $userData = [
             'name' => $user['username'] ?? 'Имя не указано',
             'email' => $user['email'] ?? 'email@notset.com',
@@ -61,6 +65,7 @@ class ProfileController extends Controller
                 'rating' => $totalStats['rating'] ?? 0,
                 'total_employees' => $totalStats['total_employees'] ?? 0,
             ],
+            'shifts' => $shifts,
         ];
 
         return view('profile.show', compact('userData'));
@@ -153,6 +158,44 @@ class ProfileController extends Controller
         } catch (\Exception $e) {
             \Log::error('Ошибка при запросе данных пользователя: ' . $e->getMessage());
             return null;
+        }
+    }
+
+    private function fetchUserShifts($userId)
+    {
+        try {
+            $response = Http::withToken(Session::get('access_token'))
+                ->timeout(10)
+                ->connectTimeout(5)
+                ->get('https://cafebar-oaba.onrender.com/shifts');
+
+            if ($response->successful()) {
+                $shifts = $response->json();
+                $currentDateTime = Carbon::now();
+
+                // Фильтрация смен по user_id и актуальности
+                $filteredShifts = array_filter($shifts, function ($shift) use ($currentDateTime, $userId) {
+                    $shiftEndDateTime = Carbon::parse($shift['shift_date'] . ' ' . $shift['shift_end']);
+                    return $shift['user_id'] == $userId && $shiftEndDateTime->isFuture();
+                });
+
+                // Сортировка по дате
+                usort($filteredShifts, function ($a, $b) {
+                    return strcmp($a['shift_date'], $b['shift_date']);
+                });
+
+                \Log::info('Смены пользователя успешно получены', ['user_id' => $userId, 'shifts_count' => count($filteredShifts)]);
+                return $filteredShifts;
+            } else {
+                \Log::error('Ошибка при получении смен пользователя', [
+                    'status' => $response->status(),
+                    'body' => $response->body(),
+                ]);
+                return [];
+            }
+        } catch (\Exception $e) {
+            \Log::error('Ошибка при запросе смен пользователя: ' . $e->getMessage());
+            return [];
         }
     }
 

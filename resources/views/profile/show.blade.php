@@ -22,6 +22,24 @@
             <p class="mb-2 text-sm sm:text-base"><strong class="text-[#6B4F4F]">Мои выполненные заказы за всё время:</strong> {{ $userData['stats']['total_orders'] }}</p>
             <p class="mb-4 text-sm sm:text-base"><strong class="text-[#6B4F4F]">Рейтинг:</strong> Вы находитесь на {{ $userData['stats']['rating'] }} месте среди {{ $userData['stats']['total_employees'] }} {{ $userData['role_plural'] }}</p>
 
+            <h2 class="text-xl sm:text-2xl font-semibold mt-4 sm:mt-6 mb-3 sm:mb-4 text-[#6B4F4F]">Расписание смен</h2>
+            @if (empty($userData['shifts']))
+                <p class="mb-4 text-sm sm:text-base text-gray-600">У вас пока что нет смен в расписании</p>
+            @else
+                <div class="space-y-4">
+                    @foreach ($userData['shifts'] as $shift)
+                        <div class="bg-[#F5F5DC] p-3 rounded-md border border-[#D4A373] shadow-sm">
+                            <p class="text-sm sm:text-base">
+                                <strong class="text-[#6B4F4F]">Дата:</strong> {{ \Carbon\Carbon::parse($shift['shift_date'])->format('d.m.Y') }}
+                            </p>
+                            <p class="text-sm sm:text-base">
+                                <strong class="text-[#6B4F4F]">Время:</strong> {{ \Carbon\Carbon::parse($shift['shift_start'])->format('H:i') }} - {{ \Carbon\Carbon::parse($shift['shift_end'])->format('H:i') }}
+                            </p>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
+
             <div class="flex flex-col sm:flex-row justify-between mt-4 sm:mt-6 space-y-3 sm:space-y-0 sm:space-x-3">
                 <a href="{{ route('profile.edit-password') }}" class="btn w-full sm:w-auto text-center">Изменить пароль</a>
                 <form method="POST" action="{{ route('profile.logout') }}" class="w-full sm:w-auto">
